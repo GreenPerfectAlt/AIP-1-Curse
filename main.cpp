@@ -1,300 +1,286 @@
-﻿#include <iostream>
+﻿/*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+			Севастопольский государственный университет 
+				Кафедра «Информационные системы»
+			Программа для работы с базой данных о рабочих
+
+
+										Текст программы	разработал
+										   Студент гр. ИC/б-19-2-о
+														Трушин Д.А
+
+							 2020 год
+ ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Программа работает с базой данных о рабочих цеха.
+В качестве структуры используется структура с информацией о рабочем,
+а также организующий двунаправленный список,построенный по принципу
+бинарного дерева.
+
+Структура записей входного файла имеет следующий вид: табельный номер,
+Ф.И.О. (30 символов),\год рождения, пол (булевская переменная),
+профессия(10 символов),стаж работы, разряд рабочего, номер цеха, номер
+участка,сумма заработной платы.
+
+Основные функции программы:
+
+-   Чтение базы данных из файла
+-   Организация списка
+-   Просмотр структуры записей с возможностью скроллинга
+-   Обработка структуры записей по заданию
+-   Поиск записи
+-   Добавление в список
+-   Удаление из списка
+-   Изменение в записи
+-   Сортировка по убыванию или по возрастанию
+-   Очистка списка
+-   Сохранение в текстовый файл
+-   Выход и бекап
+
+
+Вариант задания 9. Утверждено 08.09.2020
+Среда программирования Visual Studio C++ version 16.7.7
+Дата последней коррекции: 09.12.2020.
+Версия 1.0
+
+ +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+#include <iostream>
 #include <fstream>
 #include <cstdio>
 #include <conio.h> 
 #include <string>
 #include <Windows.h>
 #include <iomanip>
-#define BLOCK cout<<" ============================================================================= "<<endl;
-#define CLS system("cls");
-#define PAUSE system("pause");
-#define CLEAR cin.clear(); cin.ignore(cin.rdbuf()->in_avail());
-#pragma warning(disable : 4996)
-struct WORK;
+#define BLOCK cout<<" ============================================================================= "<<endl
+#define CLS system("cls")
+#define PAUSE system("pause")
+#define CLEAR cin.clear(); cin.ignore(cin.rdbuf()->in_avail())//очистка буфера ввода
+#pragma warning(disable : 4996)//отключение предупреждения для Visual Studio
 //---обявления---//
 using std::ofstream;
 using std::cout;
 using std::cin;
 using std::endl;
-//---константы---//
-const char *BASEFILE = "BASEFILE";//имя базового файла
-const int MENUITEMS = 12;//количество пунктов меню + шапка
-const char WIDTH1 = 5;//ширина для табельного номер(КЛЮЧ),года рождения
-const char WIDTH2 = 10;//ширина в 10 символов для профессии
-const char WIDTH3 = 30;//ширина в 30 для ФИО
+
+//---------------------------константы--------------------------//
+
+const char *BASEFILE = "BASEFILE";  //имя файла с базой данных
+									
+const int  MENUITEMS = 12;           //количество пунктов меню + шапка
+const char WIDTH1 = 5;              //ширина для табельного номер(КЛЮЧ),года рождения
+const char WIDTH2 = 10;             //ширина в 10 символов для профессии
+const char WIDTH3 = 30;             //ширина в 30 для ФИО
+const char WIDTHF = 25;;            //размер названия файла
 const char MENUDOWN = MENUITEMS - 1;//последний пункт меню
-const int MENUVIEWITEMS = 4;//кол-во отображаемых элементов в таблице
-const int NOWYEAR = 2020;//текущий год
-const char* arrMenu[MENUITEMS] = {//пункты меню
+const int  MENUVIEWITEMS = 4;        //кол-во отображаемых элементов в структуре записей
+const int  NOWYEAR = 2020;           //текущий год
+const char* arrMenu[MENUITEMS] = {  //пункты меню
          "Организация --> 1",
          "Просмотр --> 2" ,
-		 "Обработка таблицы и сохранение --> 3",
+		 "Обработка структуры записей и сохранение --> 3",
 		 "Поиск записи --> 4",
          "Добавление  записи --> 5" ,
          "Удаление записи --> 6",
          "Изменение записи--> 7",
-         "Сортировка  таблицы --> 8",
-         "Очистка таблицы --> 9",
+         "Сортировка  структуры записей --> 8",
+         "Очистка структуры записей --> 9",
          "Сохранение в текстовый файл --> 10",
          "Выход  --> 0",
          //Навзание работы
-         "Курсовая работа по дисциплине «Информатика и программирование»\n\nСтруктура записей входного файла имеет следующий вид: табельный номер, Ф.И.О. (30 символов), год рождения, пол(булевская переменная), профессия(10 символов), стаж работы,разряд рабочего, номер цеха, номер участка, сумма заработной платы.\n"
-};
+         "Курсовая работа по дисциплине «Информатика и программирование»\n\nСтруктура записей входного файла имеет следующий вид: табельный номер, Ф.И.О. (30 символов), год рождения, пол(булевская переменная), профессия(10 символов), стаж работы,разряд рабочего, номер цеха, номер участка, сумма заработной платы.\n"};
 
+//--------------------------типы и глобальные переменные--------------------------//
 
+enum TABLE{
+    VIEW,    //"Просмотр --> 2" ,
+    MOD,     //"Обработка структуры записей --> 3",для текстового 
+    SCN,     //"Поиск записи --> 4",
+    ADD,     //"Добавление  записи --> 5" ,
+    DEL,     //"Удаление записи --> 6",
+    ALT,     //"Изменение записи--> 7",
+    SORTUP,  //"Сортировка  структуры записей --> 8",ПО ВОЗВРАСТАНИЮ
+    SORTDOWN,//"Сортировка  структуры записей --> 8",ПО УБЫВАНИЮ
+    CLR,};   //"Очистка структуры записей --> 9",
 
-
-//---типы и глобальные переменные---//
-enum TABLE
-{
-    VIEW,//"Просмотр --> 2" ,
-    MOD,//"Обработка таблицы --> 3",для текстового 
-	
-    SCN,//"Поиск записи --> 4",
-    ADD,//"Добавление  записи --> 5" ,
-    DEL,//"Удаление записи --> 6",
-    ALT,//"Изменение записи--> 7",
-	
-    SORTUP,//"Сортировка  таблицы --> 8",ПО ВОЗВРАСТАНИЮ
-    SORTDOWN,//"Сортировка  таблицы --> 8",ПО УБЫВАНИЮ
-    CLR,//"Очистка таблицы --> 9",
-};
-
-//структура - рабочий
-struct WORK{
+struct WORK{                  //структура - рабочий
     char
-	key[WIDTH1],//табельный номер
-        year[WIDTH1],//год рождения
-    profession[WIDTH2];//профессия
+	key[WIDTH1],              //табельный номер
+        year[WIDTH1],         //год рождения
+    profession[WIDTH2];       //профессия
     unsigned char FIO[WIDTH3];//ФИО 
-	bool gender;//половая принадлежность
+	bool gender;              //половая принадлежность
 	unsigned short 
-	work_experience,//стаж работы
-	working_class,//разряд рабочего
-	manufactory_number,//номер цеха
-	site_number,//номер участка
-	salary;//сумма заработной платы
-};
+	work_experience,          //стаж работы
+	working_class,            //разряд рабочего
+	manufactory_number,       //номер цеха
+	site_number,              //номер участка
+	salary;};                 //сумма заработной платы
 
-//структура - двунаправленный список
-struct LIST {          //элемент 2- направленного списка 
-	WORK newnode;          //данные о телефоне 
-	LIST* left;          //указатель на элемент слева 
-	LIST* right;          //указатель на элемент справа
-};
+struct LIST {       //структура - двунаправленный список      
+	WORK newnode;   //данные о рабочем 
+    LIST* left;     //указатель на элемент с меньшим табельным номером 
+    LIST* right;};  //указатель на элемент с большим табельным номером 
 
-//глобальные переменные
-bool SORT = 0;
-int amountOfElements = 0;
-int menuLabel = 1;
-unsigned short sumWorkingClass[3][6] = {};
-char* name_file = new char[255];
-char* buf = new char[255];
-LIST* go,*back;
-WORK newWorker;
-WORK emptyWorker = { {"~~~" },{"~~~"},{""},{""},
+bool SORT = 0;                              //направленность сортировки
+int amountOfElements = 0,                   //кол-во элементов в структуре
+	menuLabel = 1;                          //текущая позиция индикатора выбора в меню
+unsigned short sumWorkingClass[3][6] = {};  //массив рабочих по разрядам(3) и стажу(6)
+char* name_file = new char[WIDTHF];            //имя  файла
+char* buf = new char[WIDTHF];                  //временная переменная для записи строки
+LIST* go,*back;                             //указатели вперед и назад
+WORK newWorker;                             //новый рабочий
+WORK emptyWorker = {                         //Используемая для вывода пустых значений в таблице стуктура
+	{"~~~" },{"~~~"},{""},{""},
 	{-1},{0},{0},{0},{0},{0}};
+
 HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);//дескриптор консоли,для работы с динамическим меню
 
-////---прототипы функций---//
+//--------------------------прототипы функций--------------------------//
 
-WORK creation_element();
-LIST* add_element(WORK key, LIST* go);
-bool search_element(LIST* go, char* key, bool i, TABLE tag);
-int moving_elements(LIST* go, TABLE SORT, int i, int position);
-int show_elements(const WORK& newWorker, int i);
-LIST* delete_element(LIST* go, WORK newWorker);
+//ф-ции для работы с элементами структуры
+WORK creation_element();                                         //запись нового рабочего
+LIST* add_element(WORK key, LIST* go);//добавление в структуру
+bool search_element(LIST* go, char* key, bool i, TABLE tag);    //его поиск в ней
+int moving_elements(LIST* go, TABLE SORT, int i, int position); //перемещие по бинарному дереву
+int show_elements(const WORK& newWorker, int i);                //поэлементный вывод в консоль
+LIST* delete_element(LIST* go, WORK newWorker);                 //удаление из структуры
+//ф-ции для работы со структурой данных и таблицей
+LIST* organization_table(LIST* go);         //создание структуры
+LIST* cleaning_table(LIST* go);             //очистка структуры
+LIST* operations_table(LIST* go, TABLE TAG);//ф-ция для работы с операциями над таблицей 
+//ф-ции для работы с базой данных и текстовыми файлами
+LIST* reading_from_file(LIST* go);                             //чтение из файла
+int writing_to_base(FILE* write_file, LIST* go);               //запись в бинарный файл
+void writing_to_txt(ofstream& write_file, LIST* go, TABLE tag);//запись в тектовый файл
+//ф-ции для работы с динамическим меню
+char scrolling_menu();         //перемещение по меню
+void print_menu(int menuLabel);//вывод пунктов меню в консоль
+//глобальные ф-ции для работы с изменяемыми хар-ми 
+void global_sumWorkingClass();              //количество рабочих
+void global_back(const LIST* go, TABLE tag);//указатель на предыдущий элемент
 
-LIST* organization_table(LIST* go);
-LIST* cleaning_table(LIST* go);
-LIST* operations_table(LIST* go, TABLE TAG);
+//==========================Главная функция============================//
 
-LIST* reading_from_file(LIST* go);
-int writing_to_base(FILE* write_file, LIST* go);
-void writing_to_txt(ofstream& write_file, LIST* go, TABLE tag);
-
-char scrolling_menu();
-void print_menu(int menuLabel);
-
-
-void global_sumWorkingClass();
-void global_back(const LIST* go, TABLE tag);
-
-
-//===Главная функция===/
 int main(){
     //---русский язык---/
     setlocale(LC_ALL, "rus");
     SetConsoleCP(1251);
     SetConsoleOutputCP(1251);
-
 	go = reading_from_file(go);
-    /*чтение из файла или создание файла
-     * Введите название файла из которого прочитатб / создание файла
-     * инициализация всех данных через ф-цию
-     */
-    while(true){
+    while(true){//меню
         CLS; CLEAR;
-        switch (scrolling_menu()){
-        case 1:
-        {
-            go = organization_table(go);
-        }break;
-        case 2:
-        {
-            go = operations_table(go, VIEW);
-        }break;
-        case 3:
-        {
-            go = operations_table(go, MOD);
-        }break;
-        case 4:
-        {
+        switch (scrolling_menu()){//возвращает символ
+        case 1:{
+            go = organization_table(go);}break;
+        case 2:{
+            go = operations_table(go, VIEW);}break;
+        case 3:{
+            go = operations_table(go, MOD);}break;
+        case 4:{
             CLS;
             go = operations_table(go, SCN);
-            PAUSE
-        }break;
-        case 5:
-        {
-            go = operations_table(go, ADD);
-        }break;
-        case 6:
-        {
-            go = operations_table(go, DEL);
-        }break;
-        case 7:
-        {
-            go = operations_table(go, ALT);
-        }break;
-        case 8:
-        {
-            if (SORT == true) 
+            PAUSE;}break;
+        case 5:{
+            go = operations_table(go, ADD);}break;
+        case 6:{
+            go = operations_table(go, DEL);}break;
+        case 7: {
+            go = operations_table(go, ALT); }break;
+        case 8:{
+            if (SORT == true) //если отсортированно по убыванию
                 go = operations_table(go, SORTUP);
-            else if ((SORT == false))
-                go = operations_table(go, SORTDOWN);
-        }break;
+            else if ((SORT == false))//если отсортированно по возврастанию
+                go = operations_table(go, SORTDOWN);}break;
         case 9:{
             SORT = false;
             go = cleaning_table(go);
-            puts("Таблица очищенна"); PAUSE;
-        }break;
-        case 10:
-        {
+            puts("Структура записей очищенна"); PAUSE;}break;
+        case 10:{
             CLS;
             ofstream view_table_file;
-            cout << "Введите название файла для сохранения таблицы\n"; CLEAR;
-            cin.getline(buf, 255);
+            puts("Введите название файла для сохранения структуры записей"); CLEAR;
+            cin.getline(buf, WIDTHF);
             if (strcmp(buf, ""))
                 view_table_file.open(buf, std::ios::out, std::ios::trunc);
             else {
                 strcpy(buf, "default_text_table.txt");
-                view_table_file.open(buf, std::ios::out, std::ios::trunc);
-            }
+                view_table_file.open(buf, std::ios::out, std::ios::trunc);}
             writing_to_txt(view_table_file,go, VIEW);
             view_table_file.close();
-            cout << "Сохраненно в файл /" << buf << endl;
-            PAUSE;
-        }break;
-        case 11:
-        {
+            printf("Сохраненно в файл /%s\n", buf);
+            PAUSE;}break;
+        case 11:{
             CLS;
             FILE* base_file = fopen(BASEFILE, "w");
             writing_to_base(base_file, go);
             fclose(base_file);
-            cout << "База данных сохраненна\n";
-            cout << "Не хотите скопировать её в другой файл?(1/0 -->ENTER)\n";
+            puts("База данных сохраненна");
+            puts("Не хотите скопировать её в другой файл?(1/0 -->ENTER)");
             if (cin.get() == 49) {
-                cout << "Введите название файла : "; CLEAR;
-                    cin.getline(name_file, 255);
+                puts("Введите название файла : "); CLEAR;
+                    cin.getline(name_file, WIDTHF);
             		FILE* write_file = fopen(name_file, "w");
-                    writing_to_base(write_file, go);
-            }
-			PAUSE;
-            return 0;
-        }
+                    writing_to_base(write_file, go);}
+			PAUSE;return 0;}
         default: {
-        }break;
-        }
-    }
-}
+        }break;}}}
 
 
-//---функции чтения и сохранения---//
+//--------------------------ф-ции чтения и сохранения--------------------------//
 
-//чтение из файла
-
-LIST* reading_from_file(LIST* go) {
+LIST* reading_from_file(LIST* go) {//чтение из файла
     strcpy(name_file, BASEFILE);
     bool create_file = NULL;
-    cout << "Загрузка базового данных из файла \"BASEFILE\"\n";
+    puts("Загрузка базы данных из файла \"BASEFILE\"");
     FILE* base_file = fopen(BASEFILE, "r");
     FILE* read_file;
     while (!base_file) {
-        cout << "База данных не создана (или пустая)\n";
-        cout << "Хотите загрузить из другого файла?(1/0 -->ENTER) : ";
+        puts("База данных не создана (или пустая)");
+        puts("Хотите загрузить из другого файла?(1/0 -->ENTER) : ");
         cin >> create_file;
         if (create_file == 0) {
-            cout << "Будет созданна пустая база данных\n";
+            puts( "Будет созданна пустая база данных");
             amountOfElements = 0;
-            BLOCK;
-            PAUSE;
-            return go;
-        }
+            BLOCK;PAUSE;
+            return go;}
         else {
-            cout << "Введите название файла : ";
-            CLEAR;
+            puts( "Введите название файла : ");CLEAR;
             cin >> name_file;
             read_file = fopen(name_file, "a+t");
-            do
-            {
+            do{
                 create_file = fread(&newWorker, sizeof(WORK), 1, read_file); //чтение структуры из файла
                 if (create_file < 1)
                     break;//если n<1, то конец
                 go = add_element(newWorker, go); //создаем первый элемент;
             } while (1);
-            if (!go) { cout << "Файл пустой,попробуйте ещё раз"; continue; }
-            global_back(go, ALT);
+            if (!go) { puts("Файл пустой,попробуйте ещё раз"); continue; }
             FILE* base_file = fopen(BASEFILE, "w");
             writing_to_base(base_file, go);
             fclose(base_file);
-            cout << "Данные успешно сохранились в базу\n";
-            fclose(read_file);
-            PAUSE;
-            return go;
-        }
-    }
-
+            puts( "Данные успешно сохранились в базу");
+            fclose(read_file);PAUSE;return go;}}
         /*----чтение записей из файла----*/
         do {
             create_file = fread(&newWorker, sizeof(WORK), 1, base_file); //чтение структуры из файла
             if (create_file < 1)
                 break;//если n<1, то конец
             go = add_element(newWorker, go); //создаем первый элемент
-
         } while (1);;
         global_back(go, ALT);
-        cout << "Данные успешно  загруженны\n";;
+        puts( "Данные успешно  загруженны");;
         fclose(base_file);
         PAUSE;
-        return go;
+        return go;}
 
-}
 
-//сохранение в файл
-int writing_to_base(FILE*write_file, LIST* go)
-{
-    if (go)
-    {
+int writing_to_base(FILE*write_file, LIST* go){//сохранение в бинарный файл
+    if (go){
         fwrite(go,sizeof(WORK), 1, write_file);
         writing_to_base(write_file, go->left);      //запись левого поддерева
-        writing_to_base(write_file, go->right);     //запись правого поддерева
-    }
-    return 0;
-}
+        writing_to_base(write_file, go->right);}     //запись правого поддерева
+    return 0;}
 
 void writing_to_txt(ofstream& write_file,LIST*go, TABLE tag) {
     if (tag == MOD) {
-        write_file << "	Вид выходной таблицы для варианта 9\n"
+        write_file << "	Вид выходной структуры записей для варианта 9\n"
             << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
         write_file << "~                          Количество рабочих по разрядам    ~\n"
             << "~СТАЖ РАБОТЫ~~~~~~~~~~~~~~~~~~~~~~ ВСЕГО~\n"
@@ -311,10 +297,8 @@ void writing_to_txt(ofstream& write_file,LIST*go, TABLE tag) {
             << "~До 21 до 25" << std::setw(9) << "~" << std::setw(6) << sumWorkingClass[0][4] << std::setw(6) << "~" << std::setw(7) << sumWorkingClass[1][4] << std::setw(6) << "~" << std::setw(7) << sumWorkingClass[2][4] << std::setw(6) << "~" << std::setw(7) << sumWorkingClass[2][4] + sumWorkingClass[1][4] + sumWorkingClass[0][4] << std::setw(6) << "~\n"
             << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
             << "~Свыше 25" << std::setw(12) << "~" << std::setw(6) << sumWorkingClass[0][5] << std::setw(6) << "~" << std::setw(7) << sumWorkingClass[1][5] << std::setw(6) << "~" << std::setw(7) << sumWorkingClass[2][5] << std::setw(6) << "~" << std::setw(7) << sumWorkingClass[2][5] + sumWorkingClass[1][5] + sumWorkingClass[0][5] << std::setw(6) << "~\n"
-            << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
-    }
-    else if(tag == VIEW)
-    {
+            << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";}
+    else if(tag == VIEW){
         write_file << "Структура записей входного файла имеет следующий вид: табельный номер, Ф.И.О.(30 символов), год рождения, пол (булевская переменная), профессия (10 символов),стаж работы, разряд рабочего, номер цеха, номер участка, сумма заработной платы." << endl
             <<"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
         write_file.fill('~');
@@ -336,8 +320,7 @@ void writing_to_txt(ofstream& write_file,LIST*go, TABLE tag) {
 
 //====функции работы со списком====//
 
-void global_sumWorkingClass()
-{
+void global_sumWorkingClass(){
     if (sumWorkingClass)
     {
         for (unsigned i = 0; i < 3; i++)
@@ -350,77 +333,66 @@ void global_back(const LIST*go,TABLE tag){
     back->newnode = go->newnode;
     back->left = go->left;
     back->right = back->right;
-	
-    (tag == ADD) ? amountOfElements++ : amountOfElements--;
-}
-//---создание записи
-WORK creation_element()
-	{
+    (tag == ADD) ? amountOfElements++ : amountOfElements--;}
+
+WORK creation_element(){
     CLEAR; BLOCK;
     bool j = false;
     while (j == false) {
         CLEAR;
         if (!(strcmp(newWorker.key, ""))) {
             SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 2));
-            cout << "Введите табельный номер(4 цифры c 0001 номера) или Enter для прекращения записи:";
+            puts( "Введите табельный номер(4 цифры c 0001 номера) или Enter для прекращения записи");
             cin.getline(newWorker.key, WIDTH1);
             if (!(strcmp(newWorker.key, ""))) {
-                return newWorker;
-            }
-            for (int i = 0; i < 4; i++)
-            {
+                return newWorker;}
+            for (int i = 0; i < 4; i++){
                 if (!((newWorker.key[i] > 47) and (newWorker.key[i]) <= 57)) {
                     j = true;
-                    break;
-                }
+                    break;}
                 if (i == 3)
-                    newWorker.key[4] = '\0';
-            }
+                    newWorker.key[4] = '\0';}
             int key = (newWorker.key[0]- '0') + (newWorker.key[1]- '0') + (newWorker.key[2]- '0') +( newWorker.key[3]- '0');
             if (!key) j = true;
             if (j == true) {
                 j = false;
                 SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 12));
-                cout << "!Введите корректное значение!\n";
+                puts( "!Введите корректное значение!");
                 SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0));
                 strcpy_s(newWorker.key, "");
-            	continue;
-            }
-            else break;
-        }
+            	continue;}
+            else break;}
         else {
             SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0));
-            cout << "Табельный номер введен " << newWorker.key[0] << newWorker.key[1] <<
+           cout << "Табельный номер введен " << newWorker.key[0] << newWorker.key[1] <<
                 newWorker.key[2] <<
-                newWorker.key[3] << endl; PAUSE; break;
-        }
-    }
+                newWorker.key[3] << endl; PAUSE; break;}}
       while (j == false) {
           SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0));
-        cout << "Введите Ф.И.О (30 символов:Иванов Иван Иванович,без чисел и пробела в конце): \n";
+        puts( "Введите Ф.И.О (30 символов:Иванов Иван Иванович,без чисел и пробела в конце): ");
         byte space = 0;
         CLEAR;
         fgets((char*)newWorker.FIO, WIDTH3, stdin);
         for (int i = 0; i < WIDTH3; i++){
             if ((newWorker.FIO[0] == 0x20) and (newWorker.FIO[i - 1]==0x20)and(newWorker.FIO[i] != 0x20)) { j = true; break; }
+            if (space>2){ j = true; break; }
         	if((space>=1)and(newWorker.FIO[i]== newWorker.FIO[i-1]==0x20)){j = true;break;}
             if ((!((newWorker.FIO[i] > 191) and (newWorker.FIO[i]) <= 255))){
                 if (newWorker.FIO[i] == 0x20) {space++; continue;}
             	if((newWorker.FIO[i]=='\n')and(space>=2)and(newWorker.FIO[i-1] > 191) and (newWorker.FIO[i-1] <= 255)){
                     newWorker.FIO[i] = NULL;break;}
+            	
                 j = true;break;}}
         if (j == true) {
             j = false;
             SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 12));
-            cout << "!Введите корректное значение!\n";
+            puts( "!Введите корректное значение!");
             SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0));
-            continue;
-        }
-        else break;
-    }
+            continue;}
+        else break;}
     while (1){
         SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 6));
-        cout << "Введите год рождения(1960-2000гг): ";
+        puts( "Введите год рождения(1960-2000гг): ");
         CLEAR;
         cin.getline(newWorker.year, WIDTH1);
         if (((newWorker.year[0] == 49) and (newWorker.year[1] == 57) and (((newWorker.year[2] >= 54) and ((newWorker.year[2] < 58)))))) 
@@ -428,219 +400,170 @@ WORK creation_element()
         if (((newWorker.year[0] == 50) and (newWorker.year[1] == 48) and ((newWorker.year[2] == 48) and (newWorker.year[3] == 48)))) 
              break;
         SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 12));
-        cout << "!Введите корректное значение!\n";
+        puts( "!Введите корректное значение!\n");
         SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0));
-        continue;
-    }
+        continue;}
     SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0));
-    	cout << "Введите пол (не 0 - женщина) : ";
+    	puts( "Введите пол (не 0 - женщина) : ");
         CLEAR;
         cin >> newWorker.gender;
         SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 12));
-    	cout << "Введите профессию (10 символов) : ";
+    	puts( "Введите профессию (10 символов) : ");
         CLEAR;
-        cin.getline(newWorker.profession, WIDTH2);      
+        cin.getline(newWorker.profession, WIDTH2);
     while (1) {
         SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 2));
-        cout << "Введите стаж работы : [2-42]";
+        int work_experience = ((newWorker.year[0] - '0') * 10e2 + (newWorker.year[1] - '0') * 10e1 + (newWorker.year[2] - '0') * 10e0 + (newWorker.year[3] - '0') * 10e-1 + 18);
+        cout << "Введите стаж работы : [2-" << NOWYEAR - work_experience<<"]";
         CLEAR;
         cin >> newWorker.work_experience;
-        int work_experience = ((newWorker.year[0] - '0')*10e2+ (newWorker.year[1] - '0')*10e1+ (newWorker.year[2] - '0')*10e0+ (newWorker.year[3] - '0')*10e-1+18+ newWorker.work_experience);
-        if ((newWorker.work_experience < 2) or (newWorker.work_experience > 42)or(work_experience > NOWYEAR)) {
+;        ;
+        if ((newWorker.work_experience < 2) or (newWorker.work_experience > 42)or(work_experience+ newWorker.work_experience > NOWYEAR)) {
             SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 12));
-            cout << "!Введите корректное значение!\n";
-            SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0));
-        }
-        else break;
-    }
+            puts( "!Введите корректное значение!");
+            SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0));}
+        else break;}
     while (1) {
         SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 6));
-        cout << "Введите разряд рабочего [1-3]: ";
+        puts( "Введите разряд рабочего [1-3]: ");
         CLEAR;
         cin >> newWorker.working_class;
         if ((newWorker.working_class < 1) or (newWorker.working_class > 3)) {
             SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 12));
-            cout << "!Введите корректное значение!\n";
-            SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0));
-        }
-        else break;
-    }
+            puts( "!Введите корректное значение!");
+            SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0));}
+        else break;}
         while (1) {
             SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 2));
-            cout << "Введите номер цеха[1-100] : ";
+            puts( "Введите номер цеха[1-100] : ");
             CLEAR;
             cin >> newWorker.manufactory_number;
             if (((newWorker.manufactory_number >= 1) and (newWorker.manufactory_number <= 100)))
                 break;
             SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 12));
-            cout << "!Введите корректное значение!\n";
-            SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0));
-        }
+            puts( "!Введите корректное значение!");
+            SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0));}
         while (1) {
             SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 12));
-            cout << "Введите номер участка[1-100] : ";
+            puts( "Введите номер участка[1-100] : ");
             CLEAR;
             cin >> newWorker.site_number;
             if (((newWorker.site_number >= 1) and (newWorker.site_number <= 100)))
                 break;
             SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 6));
-            cout << "!Введите корректное значение!\n";
-            SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0));
-        }
+            puts( "!Введите корректное значение!");
+            SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0));}
         while (1) {
             SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 13));
-            cout << "Введите заработную плату([15-100] в тыс.рублей) : ";
+            puts( "Введите заработную плату([15-100] в тыс.рублей) : ");
             CLEAR;
-            cin >> newWorker.salary; ;//сумма заработной платы
+            cin >> newWorker.salary;//сумма заработной платы
             if (((newWorker.salary >= 15) and (newWorker.salary <= 100)))
                 break;
             SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 12));
-            cout << "!Введите корректное значение!\n";
-            SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0));
-        }
+            puts( "!Введите корректное значение!\n");
+            SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0));}
         SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0));
-    return newWorker;
-}
+        puts("Запись осуществленна");
+    return newWorker;}
 
-//---поиск элемента в таблице
-
-bool search_element(LIST* go, char* key,bool i,TABLE tag)
-{
+bool search_element(LIST* go, char* key,bool i,TABLE tag){
     bool equal = false;
-    if (go)
-    {
-        for (int i = 0; i < 4; i++)
-        {
+    if (go){
+        for (int i = 0; i < 4; i++){
             if (go->newnode.key[i] != key[i])
                 equal = true;
-            if (equal) break;
-        }
+            if (equal) break;}
     	if(!equal){
             if (tag == ALT) {
                 newWorker = creation_element();
-                go->newnode = newWorker;
-            }
+                go->newnode = newWorker;}
             i++;
-            return i;
-        }
+            return i;}
        i = search_element(go->right, key,i,tag);
-       i = search_element(go->left, key,i,tag);  //обход правого поддерева
-    }
-    return i;
-}
+       i = search_element(go->left, key, i, tag);}
+    return i;}
 
-//---организация записей
-LIST* organization_table(LIST* go)
-{
+LIST* organization_table(LIST* go){
     CLS; CLEAR;
-    cout << "Создание таблицы\n\n";
-    if ((go))
-    {
-        puts("Таблица уже созданна,не хотите перезаписать?(1-да)");
+    FILE* read_file;
+    puts( "Создание структуры записей");
+    if ((go)){
+
+    	puts("Структура записей уже созданна,не хотите перезаписать?(1 - да)");
         if (cin.get() == '1') {
             go = cleaning_table(go);
-
-            puts("Таблица удалена");
-        }
-        else { PAUSE; return go; }
-    }
+            puts("Структура записей удалена");}
+        else { PAUSE; return go; }}
     CLEAR;
-    cout << "Хотите загрузить из файла или создать с нуля?(1-с файла)\n";
+    puts( "Хотите загрузить из файла или создать с нуля?(1 - с файла)");
     if (cin.get() == '1') {
-        char* name_file = new char[255];
-        FILE* read_file = fopen("", "r");
+        char* name_file = new char[WIDTHF];
         bool create_file = false;
+         
         CLEAR;
-        while (!read_file) {
-            cout << "Введите имя файла(Enter для выхода из программы) :";
-            cin.getline(name_file, 255);
+        while ((read_file = fopen(name_file, "r"))==NULL) {
+            puts( "Введите имя файла(Enter для выхода из программы) : ");
+            cin.getline(name_file, WIDTHF);
             if (!strcmp(name_file, "")) {
-                cout << "\nЗапись окончена\n";
+                puts( "\nЗапись окончена");
                 PAUSE;
-                return go;
-            }
+                return go;}
             read_file = fopen(name_file, "r");
             if (getc(read_file) == EOF) {
-                cout << "Файл пустой\n";
-                read_file = fopen("", "r");
-            }
+                puts( "Файл пустой");
+                read_file = fopen("", "r");}
             else {
-                fseek(read_file, 0L, SEEK_SET);   /* Перейти в начало файла */
-            }
-        }
-        do
-        {
+                fseek(read_file, 0L, SEEK_SET);break;}}/* Перейти в начало файла */
+        do{
             create_file = fread(&newWorker, sizeof(WORK), 1, read_file); //чтение структуры из файла
             if (create_file < 1)
                 break;//если n<1, то конец
             go = add_element(newWorker, go); //создаем первый элемент
             global_back(go,ADD);
         } while (1);
-        
-        return go;
-    }
-    else {
-        global_sumWorkingClass();
-    }
+        return go;}
+    else global_sumWorkingClass();
     amountOfElements = 0;
-    while (1)
-    {
+    while (1) {
         strcpy(newWorker.key, "");
         newWorker = creation_element();
         if ((strcmp(newWorker.key, ""))) {
             go = add_element(newWorker, go);
             if (!(strcmp(go->newnode.key, "000"))) {
-                continue;
-            }
-            global_back(go,ADD);
-        }
+                continue;}
+            global_back(go,ADD);}
         else {
-            cout << "\nЗапись окончена\n";
-            return go;
-        }
-    }
-}
+            puts( "\nЗапись окончена");
+            return go;}}}
 
-
-
-//---очистка таблицы
-LIST* cleaning_table(LIST* go)
-{
+//---очистка структуры записей
+LIST* cleaning_table(LIST* go){
     SORT = false;
     global_sumWorkingClass();
     amountOfElements = 0;
-    if (go)
-    {
-        if (go->left)
-        {
-            cleaning_table(go->left);
-        }
+    if (go){
+        if (go->left){
+            cleaning_table(go->left);}
         if (go->right)
-        {
-            cleaning_table(go->right);
-        }
-    }
+            cleaning_table(go->right);}
     else return NULL;
     delete go;
-    return go = NULL;
-}
+    return go = NULL;}
 
-//---функции работы с таблицей
+//---функции работы с структурой записей
 
-LIST* operations_table(LIST* go, TABLE TAG)
-{
+LIST* operations_table(LIST* go, TABLE TAG){
     CLS;
     char itemOfTable = 0;
     int positionOfElement = 1;
     if (!(go) and ((TAG != ADD))) {
-        puts("Таблица не созданна");
-        PAUSE; return go;
-    }
+        puts("Структура записей не созданна");
+        PAUSE; return go;}
     else if (TAG != MOD) {
-        while (1)
-        {
+        while (1){
             CLS;
-            cout << "Структура записей входного файла имеет следующий вид: \n" << endl;
+            puts( "Структура записей входного файла имеет следующий вид: ");
             SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0));
             BLOCK;
             SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0)); cout << "|";
@@ -665,28 +588,22 @@ LIST* operations_table(LIST* go, TABLE TAG)
             SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0));    cout << "пол";
             SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0)); cout << "|\n";
             BLOCK;
-
             if (!(positionOfElement > amountOfElements)) {
                 if (SORT == false)
                     moving_elements(go, SORTUP, 0, positionOfElement);
                 else
-                    moving_elements(go, SORTDOWN, 0, positionOfElement);
-            }
+                    moving_elements(go, SORTDOWN, 0, positionOfElement);}
             else {
                 positionOfElement = 1;
                 if (SORT == false)
                     moving_elements(go, SORTUP, 0, positionOfElement);
                 else
-                    moving_elements(go, SORTDOWN, 0, positionOfElement);
-            }
+                    moving_elements(go, SORTDOWN, 0, positionOfElement);}
             SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0));//белый
             CLEAR;
-
             puts("\nПеремещение --> стрелочки  вверх и вниз\nЗапуск команды  --> Enter\nДля выхода --> ESC");
-
             SetConsoleTextAttribute(hConsole, (WORD)((3 << 4) | 14));//            
             SORT ? puts("Отсортировано по убыванию") : puts("Отсортировано по возврастанию");
-
             SetConsoleTextAttribute(hConsole, (WORD)((5 << 4) | 14));//красный
             CLEAR;
             SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0));//красный
@@ -696,11 +613,9 @@ LIST* operations_table(LIST* go, TABLE TAG)
                 puts("Нажата клавиша ESC - операция завершена");
                 SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0));//красный
                 Sleep(1500);
-                return go;
-            }
+                return go;}
             else if (itemOfTable == 13) {
-                switch (TAG)
-                {
+                switch (TAG){
                 case VIEW: {
                     continue; }
                 case SORTDOWN:case SORTUP:
@@ -708,27 +623,22 @@ LIST* operations_table(LIST* go, TABLE TAG)
                     SORT ? puts("Операция : сортировка по возврастанию") : puts("Операция : сортировка по убыванию");
                     SORT ? SORT = false : SORT = true;
                     SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0));
-                    Sleep(1000); continue;
-                }break;
+                    Sleep(1000); continue;}break;
                 case SCN: {
                     puts("Операция : поиск работника по табельному номеру");
                     SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 2));
                     puts("Введите табельный номер(0000-9999) : ");
                     SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0));
                     CLEAR;
-
                     cin.getline(newWorker.key, 5);
                     if (search_element(go, newWorker.key, 0, VIEW)) {
                         BLOCK;
-                        cout << "Элемент " << newWorker.key << " записан в таблице\n";
-                        BLOCK; PAUSE;
-                    }
+                        cout << "Элемент " << newWorker.key << " записан в структуре записей\n";
+                        BLOCK; PAUSE;}
                     else {
                         BLOCK;
-                        cout << "Элемент " << newWorker.key << " не записан в таблице\n";
-                        BLOCK; PAUSE;
-                    }break;
-                }
+                        cout << "Элемент " << newWorker.key << " не записан в структуре записей\n";
+                        BLOCK; PAUSE;}break;}
                 case ADD: {
                     int i = 0;
                     puts("Операция : добавление работника по табельному номеру");
@@ -737,136 +647,92 @@ LIST* operations_table(LIST* go, TABLE TAG)
                     cin.getline(newWorker.key, 5);
                     SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0));
                     bool j = false;
-                    for (int i = 0; i < 4; i++)
-                    {
+                    for (int i = 0; i < 4; i++){
                         if ((!((newWorker.key[i] > 47) and (newWorker.key[i]) <= 57)) or (!strcmp(newWorker.key, "0000"))) {
-                            cout << "Неверный ввод\n";
-
-                            j = true;
-                            break;
-                        }
-                    }
+                            puts( "Неверный ввод");
+                            j = true;break;}}
                     if (j) { PAUSE;continue; };
                     newWorker.key[4] = NULL;
                     if (go) {
-                        if ((i = search_element(go, newWorker.key, 0, VIEW)) == true)
-                        {
+                        if ((i = search_element(go, newWorker.key, 0, VIEW)) == true){
                             BLOCK;
-                            cout << "Элемент " << newWorker.key << " записан в таблице\n";
-                            BLOCK; PAUSE;continue;
-                        }
-                        else if (!(strcmp(newWorker.key, "")))
-                        {
-                            puts("Отмена записи данного табельного номера"); PAUSE; continue;
-                        }
+                            cout << "Элемент " << newWorker.key << " записан в структуре записей\n";
+                            BLOCK; PAUSE;continue;}
+                        else if (!(strcmp(newWorker.key, ""))){
+                            puts("Отмена записи данного табельного номера"); PAUSE; continue;}
                         else {
-                            cout << "Элемент    " << newWorker.key << " не записан в таблице\n"; Sleep(1000);
-                            if (amountOfElements == 9999)
-                            {
-                                puts("Превышен лимит записей (0001-9999)"); continue;
-                            }
-                            puts("Будет произведенна запись"); Sleep(2000);
-                        }
-                    }
+                            cout << "Элемент    " << newWorker.key << " не записан в структуре записей\n"; Sleep(1000);
+                            if (amountOfElements == 9999){
+                                puts("Превышен лимит записей (0001-9999)"); continue;}
+                            puts("Будет произведенна запись"); Sleep(2000);}}
                     BLOCK; CLS;
                     newWorker = creation_element();
                     go = add_element(newWorker, go);
                     if (!(strcmp(go->newnode.key, "000"))) {
-                        continue;
-                    }
+                        continue;}
                         global_back(go,ADD);
-                    amountOfElements++;
-                }
+                    amountOfElements++; }
                         break;
-                case DEL:
-                {
+                case DEL:{
                     puts("Операция : удаление работника по табельному номеру");
-                    if ((go->right == NULL) and (go->left == NULL))
-                    {
-                        puts("В таблице остался последний элемент");
+                    if ((go->right == NULL) and (go->left == NULL)){
+                        puts("В структуре записей остался последний элемент");
                         PAUSE;
-                        continue;
-                    }
+                        continue;}
                     puts("Введите табельный номер(0000-9999) : ");
                     SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 12));
                     cin.getline(newWorker.key, 5);
                     SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0));
-                    if (!(search_element(go, newWorker.key, 0, VIEW)))
-                    {
+                    if (!(search_element(go, newWorker.key, 0, VIEW))){
                         BLOCK;
-                        cout << "Элемент " << newWorker.key << " не записан в таблице\n";
-                        BLOCK; PAUSE;
-                    }
-                    else if (!(strcmp(newWorker.key, "")))
-                    {
-                        puts("Отмена записи данного табельного номера"); PAUSE; continue;
-                    }
+                        cout << "Элемент " << newWorker.key << " не записан в структуре записей\n";
+                        BLOCK; PAUSE;}
+                    else if (!(strcmp(newWorker.key, ""))){
+                        puts("Отмена записи данного табельного номера"); PAUSE; continue;}
                     else {
-                        cout << "Элемент " << newWorker.key << " записан в таблице\n";
+                        cout << "Элемент " << newWorker.key << " записан в структуре записей\n";
                         puts("Будет произведененно удаление");
-
                         go = delete_element(go, newWorker);
-                        global_back(go,DEL);
-                    }
-                }
+                        global_back(go,DEL);}}
                 break;
                 case ALT: {
                     puts("Операция : изменение данных работника по табельному номеру");
-
                     puts("Введите табельный номер(0000-9999) : ");
                     SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 1));
                     cin.getline(newWorker.key, 5);
                     SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0));
-                    if (!(search_element(go, newWorker.key, 0, VIEW)))
-                    {
+                    if (!(search_element(go, newWorker.key, 0, VIEW))){
                         BLOCK;
-                        cout << "Элемент " << newWorker.key << " не записан в таблице\n";
-                        BLOCK; PAUSE;
-                    }
-                    else if (!(strcmp(newWorker.key, "")))
-                    {
-                        puts("Отмена записи данного табельного номера"); PAUSE; continue;
-                    }
+                        cout << "Элемент " << newWorker.key << " не записан в структуре записей\n";
+                        BLOCK; PAUSE;}
+                    else if (!(strcmp(newWorker.key, ""))){
+                        puts("Отмена записи данного табельного номера"); PAUSE; continue;}
                     else {
-                        cout << "Элемент " << newWorker.key << " записан в таблице\n";
+                        cout << "Элемент " << newWorker.key << " записан в структуре записей\n";
                         puts("Будет произведененно изменение");
-
-                        search_element(go, newWorker.key, 0, ALT);
-                    }
-                }
+                        search_element(go, newWorker.key, 0, ALT);}}
                         break;
                 default:
-                    break;
-                }
-            }
+                    break;}}
             itemOfTable = _getch_nolock();
             if (itemOfTable == 80) {
                 if (positionOfElement >= amountOfElements) {
-                    positionOfElement = 1; continue;
-                }
+                    positionOfElement = 1; continue;}
                 if (positionOfElement + MENUVIEWITEMS >= amountOfElements)
                     positionOfElement = 1;
-                else { positionOfElement += MENUVIEWITEMS; }
-            }
+                else { positionOfElement += MENUVIEWITEMS; }}
             else if (itemOfTable == 72) {
                 if (positionOfElement <= 1) {
-                    positionOfElement = amountOfElements - MENUVIEWITEMS; continue;
-                }
+                    positionOfElement = amountOfElements - MENUVIEWITEMS; continue;}
                 if (positionOfElement - MENUVIEWITEMS <= 0) {
-                    positionOfElement = 1; continue;
-                }
-                positionOfElement -= MENUVIEWITEMS;
-            }
+                    positionOfElement = 1; continue;}
+                positionOfElement -= MENUVIEWITEMS;}
             else {
                 itemOfTable = 0;
-                continue;
-            }
-        }
-    }
-    else//tag == MOD,изменение таблицы
-    {
+                continue;}}}
+    else{//tag == MOD,изменение структуры записейицы
         BLOCK;
-        cout << "\t\tВид выходной таблицы для варианта 9" << std::setw(30) << endl; BLOCK;
+        cout << "\t\tВид выходной структуры записейицы для варианта 9" << std::setw(30) << endl; BLOCK;
         cout << "|" << std::setw(20) << "|" << std::setw(5) << "\tКоличество рабочих по разрядам" << std::setw(5) << "|" << std::setw(21) << "|\n" <<
             "|" << "    СТАЖ РАБОТЫ" << std::setw(5) << "|" << std::setw(5) << "=====================================" << "|" << "      ВСЕГО" << std::setw(10) << "|\n"
             << "|" << std::setw(20) << "|" << std::setw(6) << "1" << std::setw(6) << "|" << std::setw(7) << "2" << std::setw(6) << "|" << std::setw(7) << "3" << std::setw(6) << "|" << std::setw(21) << "|\n"
@@ -882,87 +748,67 @@ LIST* operations_table(LIST* go, TABLE TAG)
             << "|До 21 до 25" << std::setw(9) << "|" << std::setw(6) << sumWorkingClass[0][4] << std::setw(6) << "|" << std::setw(7) << sumWorkingClass[1][4] << std::setw(6) << "|" << std::setw(7) << sumWorkingClass[2][4] << std::setw(6) << "|" << std::setw(9) << sumWorkingClass[2][4] + sumWorkingClass[1][4] + sumWorkingClass[0][4] << std::setw(12) << "|\n"
             << " =============================================================================\n"
             << "|Свыше 25" << std::setw(12) << "|" << std::setw(6) << sumWorkingClass[0][5] << std::setw(6) << "|" << std::setw(7) << sumWorkingClass[1][5] << std::setw(6) << "|" << std::setw(7) << sumWorkingClass[2][5] << std::setw(6) << "|" << std::setw(9) << sumWorkingClass[2][5] + sumWorkingClass[1][5] + sumWorkingClass[0][5] << std::setw(12) << "|\n"
-            << " =============================================================================\n";
-    }
+            << " =============================================================================\n";}
     ofstream processed_table_file;
-    cout << "Введите название файла для сохранения таблицы\n"; CLEAR;
-    cin.getline(buf, 255);
+    puts( "Введите название файла для сохранения структуры записей"); CLEAR;
+    cin.getline(buf, WIDTHF);
     if (strcmp(buf, ""))
         processed_table_file.open(buf, std::ios::out, std::ios::trunc);
     else
         processed_table_file.open("default_processed_table.txt", std::ios::out, std::ios::trunc);
     writing_to_txt(processed_table_file, go, MOD);
-    processed_table_file.close();PAUSE; return go;
-}
+    processed_table_file.close();PAUSE; return go;}
 
-//---функции работы с таблицей
+//---функции работы с структурой записей
 int show_elements(const WORK& newWorker, int i) {
     SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0)); cout << "|";
     if (!strcmp(newWorker.key, "~~~")) {
-        SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 2)); cout << "    ";
-    }
+        SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 2)); cout << "    ";}
     else { SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 2)); cout << newWorker.key[0] << newWorker.key[1] << newWorker.key[2] << newWorker.key[3]; }
     SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0)); cout << "|";
     if (!strcmp(newWorker.year, "~~~")) {
-        SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 2)); cout << "    ";
-    }
-    else
-    {
-        SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 6)); cout << newWorker.year[0] << newWorker.year[1] << newWorker.year[2] << newWorker.year[3];
-    }
+        SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 2)); cout << "    ";}
+    else{
+        SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 6)); cout << newWorker.year[0] << newWorker.year[1] << newWorker.year[2] << newWorker.year[3];}
     SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0)); cout << "|";
     SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 12)); cout << std::setw(10) << newWorker.profession;
     SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0)); cout << "|";
     SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0));  cout << std::setw(30) << newWorker.FIO;
     SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0)); cout << "|";
     if (newWorker.work_experience == 0) {
-        SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 2)); cout << "    ";
-    }
+        SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 2)); cout << "    ";}
     else {
-        SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 2)); cout << std::setw(4) << newWorker.work_experience;
-    }
+        SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 2)); cout << std::setw(4) << newWorker.work_experience;}
     SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0)); cout << "|";
     if (newWorker.working_class == 0) {
-        SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 2)); cout << "  ";
-    }
+        SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 2)); cout << "  ";}
     else {
-        SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 6)); cout << std::setw(2) << newWorker.working_class;
-    }
+        SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 6)); cout << std::setw(2) << newWorker.working_class;}
     SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0)); cout << "|";
     if (newWorker.manufactory_number == 0) {
-        SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 2)); cout << "    ";
-    }
+        SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 2)); cout << "    ";}
     else {
-        SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 2)); cout << std::setw(4) << newWorker.manufactory_number;
-    }
+        SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 2)); cout << std::setw(4) << newWorker.manufactory_number;}
     SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0)); cout << "|";
     if (newWorker.manufactory_number == 0) {
-        SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 2)); cout << "   ";
-    }
+        SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 2)); cout << "   ";}
     else {
-        SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 12)); cout << std::setw(3) << newWorker.site_number;
-    }
+        SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 12)); cout << std::setw(3) << newWorker.site_number;}
     SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0)); cout << "|";
     if (newWorker.manufactory_number == 0) {
-        SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 2)); cout << "      ";
-    }
+        SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 2)); cout << "      ";}
     else {
-        SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 13)); cout << std::setw(6) << newWorker.salary;
-    }
+        SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 13)); cout << std::setw(6) << newWorker.salary;}
     SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0)); cout << "|";
     if (newWorker.gender == 0) {
         SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 6)); cout << "М";
-        SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0)); cout << "|\n";
-    }
-    else
-    {
+        SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0)); cout << "|\n";}
+    else{
         SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 12)); cout << "Ж";
-        SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0)); cout << "|\n";
-    }
+        SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0)); cout << "|\n";}
     SetConsoleTextAttribute(hConsole, (WORD)((2 << 4) | 0));
     SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0));
-    BLOCK; return i++;
-}
+    BLOCK; return i++;}
 
 //перемещение по элементам и вывод в консоль
 int moving_elements(LIST* go, TABLE SORT, int i, int position){
@@ -973,24 +819,19 @@ int moving_elements(LIST* go, TABLE SORT, int i, int position){
         i = moving_elements(go->right, SORT, i, position);
     i++;
     if ((i >= position) and (i <= position + MENUVIEWITEMS)) {
-        show_elements(go->newnode, i); //обход левого поддерева
-    }
+        show_elements(go->newnode, i); }
     else if (i > position + MENUVIEWITEMS - 1) return position + MENUVIEWITEMS;
-    if (i == amountOfElements)
-    {
+    if (i == amountOfElements){
         for (auto j = amountOfElements; j < (position + MENUVIEWITEMS-1); j++)
             show_elements(emptyWorker, i); //запись пустых элементов
-        return -9999;
-    }
+        return -9999;}
     if ((go) and (SORT == SORTUP))
         i = moving_elements(go->right, SORT, i, position);//обход правого поддерева
     else if ((go) and (SORT == SORTDOWN))
-        i = moving_elements(go->left, SORT, i, position);
-}
+        i = moving_elements(go->left, SORT, i, position);}
 
 LIST* add_element(WORK newWorker, LIST* go) {
-    if (go == NULL)
-    {
+    if (go == NULL){
         go = new LIST;
         go->newnode = newWorker;
         go->left = NULL;
@@ -1008,33 +849,23 @@ LIST* add_element(WORK newWorker, LIST* go) {
         else if (newWorker.work_experience < 6)
             sumWorkingClass[newWorker.working_class - 1][0] ++;
         global_back(go,ADD);
-        return go;
-    }
-    else if ((newWorker.key[0]==go->newnode.key[0])and(newWorker.key[1] == go->newnode.key[1])and(newWorker.key[2] == go->newnode.key[2])and(newWorker.key[3] == go->newnode.key[3]))
-    {
+        return go;}
+    else if ((newWorker.key[0]==go->newnode.key[0])and(newWorker.key[1] == go->newnode.key[1])and(newWorker.key[2] == go->newnode.key[2])and(newWorker.key[3] == go->newnode.key[3])){
         BLOCK;
         cout << "Ошибка - табельный номер " << go->newnode.key[0] << go->newnode.key[1] << go->newnode.key[2] << go->newnode.key[3] << " уже записан, работник - " << go->newnode.FIO << endl;
         for (int i = 0; i < 3; i++)
             go->newnode.key[i] = '0';
         go->newnode.key[3] = '\0';
-        return go;
-    }
+        return go;}
     else {
-        for (int i = 0; i < 4; i++)
-        {
+        for (int i = 0; i < 4; i++){
             if (newWorker.key[i] < go->newnode.key[i]) {
                 go->left = add_element(newWorker, go->left);
-                return(go);
-            }
+                return(go);}
             else if (newWorker.key[i] > go->newnode.key[i]) {
                 go->right = add_element(newWorker, go->right);
-                return(go);
-            }
-            
-            else { continue; }
-        }
-    }
-}
+                return(go);}     
+            else { continue; }}}}
 
 
 LIST* delete_element(LIST* go, WORK newWorker) {
@@ -1048,114 +879,76 @@ LIST* delete_element(LIST* go, WORK newWorker) {
             LIST* ptr = go->right;
             if (ptr->left == NULL) {
                 ptr->left = go->left;
-                tmp = ptr;
-            }
+                tmp = ptr;}
             else {
                 LIST* pmin = ptr->left;
                 while (pmin->left != NULL) {
                     ptr = pmin;
-                    pmin = ptr->left;
-                }
+                    pmin = ptr->left;}
                 ptr->left = pmin->right;
                 pmin->left = go->left;
                 pmin->right = go->right;
-                tmp = pmin;
-            }
-        }
+                tmp = pmin;}}
         delete go;
-        return tmp;
-    }
-    for (int i = 0; i < 4; i++)
-    {
+        return tmp;}
+    for (int i = 0; i < 4; i++){
         if (newWorker.key[i] < go->newnode.key[i]) {
             go->left = delete_element(go->left, newWorker);
-            return(go);
-        }
+            return(go);}
         else if (newWorker.key[i] > go->newnode.key[i]) {
             go->right = delete_element(go->right, newWorker);
-            return(go);
-        }
-        else { continue; }
-    }
-    return go;
-}
+            return(go);}
+        else { continue; }}
+    return go;}
 
 //----Вывод главного меню---///
-void print_menu(int menuLabel)
-{
+void print_menu(int menuLabel){
     CLS;
     BLOCK;
     cout<<arrMenu[MENUITEMS-1]<<"Программа рассчитана на текущий "<<NOWYEAR<<" год\n";
     BLOCK;
-    for (int i = 0; i < MENUITEMS-1; i++)
-    {
-        if (i == (menuLabel - 1))
-        {
+    for (int i = 0; i < MENUITEMS-1; i++){
+        if (i == (menuLabel - 1)){
             SetConsoleTextAttribute(hConsole, (WORD)((7 << 4) | 0));
             cout << arrMenu[i] << endl;
-            continue;
-        }
+            continue;}
         SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0));
-        cout << arrMenu[i] << endl;
-    }
+        cout << arrMenu[i] << endl;}
     SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0));
-    BLOCK;
-}
+    BLOCK;}
 
 //---динамическое управление через стрелочки
-char scrolling_menu()
-{
-
+char scrolling_menu(){
 	CLS;char item;
     print_menu(menuLabel);
-    while ((item = _getch_nolock()) != 13)
-    {
-        if ((item != -32) and (item != 27))
-        {
+    while ((item = _getch_nolock()) != 13){
+        if ((item != -32) and (item != 27)){
             CLEAR;
             item = 0;
-            continue;
-        }
+            continue;}
         item = _getch_nolock();
         switch (item) {
-        case 80:
-        {
-            if (menuLabel == MENUDOWN)
-            {
+        case 80:{
+            if (menuLabel == MENUDOWN){
                 menuLabel = 1;
-                print_menu(menuLabel);
-            }
-            else
-            {
+                print_menu(menuLabel);}
+            else{
                 menuLabel++;
-                print_menu(menuLabel);
-            }
+                print_menu(menuLabel);}
         }break;
-        case 72:
-        {
-            if (menuLabel == 1)
-            {
+        case 72:{
+            if (menuLabel == 1){
                 menuLabel = MENUDOWN;
-                print_menu(menuLabel);
-            }
-            else
-            {
+                print_menu(menuLabel);}
+            else{
                 menuLabel--;
-                print_menu(menuLabel);
-            }
+                print_menu(menuLabel);}
         }break;
-        case 27:
-        {
+        case 27:{
             print_menu(MENUDOWN);
-            return MENUDOWN;
-        }break;
-        default:{
-            continue;
-        }
-            break;
-        }
-    }
-	
-    return menuLabel;
-}
+            return MENUDOWN;}break;
+        default: {
+            continue; }
+            break;} }	
+    return menuLabel;}
 
