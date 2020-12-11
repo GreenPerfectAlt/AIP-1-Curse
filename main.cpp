@@ -154,9 +154,9 @@ void writing_to_txt(ofstream& write_file, LIST* go, TABLE tag);//запись в
 char scrolling_menu();         //перемещение по меню
 void print_menu(int menuLabel);//вывод пунктов меню в консоль
 //глобальные ф-ции для работы с изменяемыми хар-ми 
-void global_sumWorkingClass();              //количество рабочих
-void global_back(const LIST* go, TABLE tag);//указатель на предыдущий элемент
-
+void global_clsSumWorkingClass();              //количество рабочих
+void global_back(const LIST* go, TABLE tag);   //указатель на предыдущий элемент
+void global_addSumWorkingClass(const WORK newWorker);
 //==========================Главная функция============================//
 
 int main(){
@@ -164,6 +164,7 @@ int main(){
     setlocale(LC_ALL, "rus");
     SetConsoleCP(1251);
     SetConsoleOutputCP(1251);
+
 	go = reading_from_file(go);
     while(true){//меню
         CLS; CLEAR;
@@ -232,12 +233,12 @@ LIST* reading_from_file(LIST* go) {//чтение из файла
     puts("Загрузка базы данных из файла \"BASEFILE\"");
     FILE* base_file = fopen(BASEFILE, "r");
     FILE* read_file;
-    while (!base_file) {
+    while (!base_file){
         puts("База данных не создана (или пустая)");
         puts("Хотите загрузить из другого файла?(1/0 -->ENTER) : ");
         cin >> create_file;
         if (create_file == 0) {
-            puts( "Будет созданна пустая база данных");
+            puts( "Будет создана пустая база данных");
             amountOfElements = 0;
             BLOCK;PAUSE;
             return go;}
@@ -264,7 +265,6 @@ LIST* reading_from_file(LIST* go) {//чтение из файла
                 break;//если n<1, то конец
             go = add_element(newWorker, go); //создаем первый элемент
         } while (1);;
-        global_back(go, ALT);
         puts( "Данные успешно  загруженны");;
         fclose(base_file);
         PAUSE;
@@ -305,22 +305,22 @@ void writing_to_txt(ofstream& write_file,LIST*go, TABLE tag) {
         writing_to_txt(write_file,go,ADD);
     }else if(tag == ADD){
         if (!(go)) return;
-        if ((go) and !(SORT))
+        if (!(SORT))
             writing_to_txt(write_file, go->left, ADD);
-        else if ((go) and (SORT))
+        else if (SORT)
             writing_to_txt(write_file, go->right, ADD);
     write_file << "~" << go->newnode.key[0] << go->newnode.key[1] << go->newnode.key[2] << go->newnode.key[3] << "~" << go->newnode.year[0] << go->newnode.year[1] << go->newnode.year[2] << go->newnode.year[3] << "~" << std::left << std::setw(10) << go->newnode.profession  << "~" << std::left << std::setw(15) << go->newnode.FIO<<  "~стаж работы " << std::left << std::setw(4) << go->newnode.work_experience  << "~разряд рабочего " << std::left << std::setw(2) << newWorker.working_class << "~номер цеха " << std::left << std::setw(4) << newWorker.manufactory_number << "~номер участка " << std::left << std::setw(3) << go->newnode.site_number << "~зарплата " << std::left << std::setw(6) << go->newnode.salary << "~";
         if (go->newnode.gender == 0) write_file << std::right << std::setw(1) << "Мужчина~"; else write_file <<std::right<<std::setw(1)<< "Женщина~";
         write_file
     	<< "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
-        if ((go) and !(SORT))
+        if (!(SORT))
             writing_to_txt(write_file, go->right, ADD);
-        else if ((go) and (SORT))
+        else if (SORT)
             writing_to_txt(write_file, go->left, ADD);}}
 
 //====функции работы со списком====//
 
-void global_sumWorkingClass(){
+void global_clsSumWorkingClass(){
     if (sumWorkingClass)
     {
         for (unsigned i = 0; i < 3; i++)
@@ -334,6 +334,21 @@ void global_back(const LIST*go,TABLE tag){
     back->left = go->left;
     back->right = back->right;
     (tag == ADD) ? amountOfElements++ : amountOfElements--;}
+
+void global_addSumWorkingClass(const WORK newWorker) {
+    if (newWorker.work_experience > 25)
+        sumWorkingClass[newWorker.working_class - 1][5] ++;
+    else if (newWorker.work_experience >= 21)
+        sumWorkingClass[newWorker.working_class - 1][4] ++;
+    else if (newWorker.work_experience >= 16)
+        sumWorkingClass[newWorker.working_class - 1][3] ++;
+    else if (newWorker.work_experience >= 11)
+        sumWorkingClass[newWorker.working_class - 1][2] ++;
+    else if (newWorker.work_experience >= 6)
+        sumWorkingClass[newWorker.working_class - 1][1] ++;
+    else if (newWorker.work_experience < 6)
+        sumWorkingClass[newWorker.working_class - 1][0] ++;
+}
 
 WORK creation_element(){
     CLEAR; BLOCK;
@@ -390,7 +405,7 @@ WORK creation_element(){
             SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0));
             continue;}
         else break;}
-    while (1){
+    while (1) {
         SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 6));
         puts( "Введите год рождения(1960-2000гг): ");
         CLEAR;
@@ -411,7 +426,7 @@ WORK creation_element(){
     	puts( "Введите профессию (10 символов) : ");
         CLEAR;
         cin.getline(newWorker.profession, WIDTH2);
-    while (1) {
+    while (1){
         SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 2));
         int work_experience = ((newWorker.year[0] - '0') * 10e2 + (newWorker.year[1] - '0') * 10e1 + (newWorker.year[2] - '0') * 10e0 + (newWorker.year[3] - '0') * 10e-1 + 18);
         cout << "Введите стаж работы : [2-" << NOWYEAR - work_experience<<"]";
@@ -467,30 +482,28 @@ WORK creation_element(){
         puts("Запись осуществленна");
     return newWorker;}
 
-bool search_element(LIST* go, char* key,bool i,TABLE tag){
-    bool equal = false;
-    if (go){
-        for (int i = 0; i < 4; i++){
-            if (go->newnode.key[i] != key[i])
-                equal = true;
-            if (equal) break;}
-    	if(!equal){
-            if (tag == ALT) {
-                newWorker = creation_element();
-                go->newnode = newWorker;}
-            i++;
-            return i;}
-       i = search_element(go->right, key,i,tag);
-       i = search_element(go->left, key, i, tag);}
-    return i;}
+bool search_element(LIST* go, char* key, bool i, TABLE tag){
+        bool equal = false;
+        if (go){
+            for (int j = 0;j < 4;j++){
+                if (go->newnode.key[j] != key[j])
+                    equal = true;
+                if (equal) break;}
+            if (!equal) {
+                if (tag == ALT) {
+                    newWorker = creation_element();
+                    go->newnode = newWorker;}
+                return true;}
+            i = search_element(go->right, key, i, tag);
+            i = search_element(go->left, key, i, tag); }
+        return i;}
 
 LIST* organization_table(LIST* go){
     CLS; CLEAR;
     FILE* read_file;
     puts( "Создание структуры записей");
     if ((go)){
-
-    	puts("Структура записей уже созданна,не хотите перезаписать?(1 - да)");
+    	puts("Структура записей уже создана, не хотите перезаписать? (1 - да) ");
         if (cin.get() == '1') {
             go = cleaning_table(go);
             puts("Структура записей удалена");}
@@ -500,30 +513,34 @@ LIST* organization_table(LIST* go){
     if (cin.get() == '1') {
         char* name_file = new char[WIDTHF];
         bool create_file = false;
-         
         CLEAR;
-        while ((read_file = fopen(name_file, "r"))==NULL) {
-            puts( "Введите имя файла(Enter для выхода из программы) : ");
+        while ((read_file = fopen(name_file, "r")) == NULL) {
+            puts("Введите имя файла(Enter для выхода из программы) : ");
             cin.getline(name_file, WIDTHF);
             if (!strcmp(name_file, "")) {
-                puts( "\nЗапись окончена");
+                puts("\nЗапись окончена");
                 PAUSE;
-                return go;}
+                return go;
+            }
             read_file = fopen(name_file, "r");
             if (getc(read_file) == EOF) {
-                puts( "Файл пустой");
-                read_file = fopen("", "r");}
+                puts("Файл пустой");
+                read_file = fopen("", "r");
+            }
             else {
-                fseek(read_file, 0L, SEEK_SET);break;}}/* Перейти в начало файла */
-        do{
+                fseek(read_file, 0L, SEEK_SET); break;
+            }
+        }/* Перейти в начало файла */
+        do {
             create_file = fread(&newWorker, sizeof(WORK), 1, read_file); //чтение структуры из файла
             if (create_file < 1)
                 break;//если n<1, то конец
             go = add_element(newWorker, go); //создаем первый элемент
-            global_back(go,ADD);
+            global_back(go, ADD);
         } while (1);
-        return go;}
-    else global_sumWorkingClass();
+        return go;
+    }
+    else global_clsSumWorkingClass();
     amountOfElements = 0;
     while (1) {
         strcpy(newWorker.key, "");
@@ -540,7 +557,7 @@ LIST* organization_table(LIST* go){
 //---очистка структуры записей
 LIST* cleaning_table(LIST* go){
     SORT = false;
-    global_sumWorkingClass();
+    global_clsSumWorkingClass();
     amountOfElements = 0;
     if (go){
         if (go->left){
@@ -654,7 +671,7 @@ LIST* operations_table(LIST* go, TABLE TAG){
                     if (j) { PAUSE;continue; };
                     newWorker.key[4] = NULL;
                     if (go) {
-                        if ((i = search_element(go, newWorker.key, 0, VIEW)) == true){
+                        if ((search_element(go, newWorker.key, 0, VIEW))){
                             BLOCK;
                             cout << "Элемент " << newWorker.key << " записан в структуре записей\n";
                             BLOCK; PAUSE;continue;}
@@ -666,8 +683,7 @@ LIST* operations_table(LIST* go, TABLE TAG){
                                 puts("Превышен лимит записей (0001-9999)"); continue;}
                             puts("Будет произведенна запись"); Sleep(2000);}}
                     BLOCK; CLS;
-                    newWorker = creation_element();
-                    go = add_element(newWorker, go);
+                    go = add_element((newWorker = creation_element()), go);
                     if (!(strcmp(go->newnode.key, "000"))) {
                         continue;}
                         global_back(go,ADD);
@@ -813,9 +829,9 @@ int show_elements(const WORK& newWorker, int i) {
 //перемещение по элементам и вывод в консоль
 int moving_elements(LIST* go, TABLE SORT, int i, int position){
     if (!go)    return i;
-    if ((go) and (SORT == SORTUP))
+    if (SORT == SORTUP)
         i = moving_elements(go->left, SORT, i, position);
-    else if ((go) and (SORT == SORTDOWN))
+    else if (SORT == SORTDOWN)
         i = moving_elements(go->right, SORT, i, position);
     i++;
     if ((i >= position) and (i <= position + MENUVIEWITEMS)) {
@@ -825,31 +841,22 @@ int moving_elements(LIST* go, TABLE SORT, int i, int position){
         for (auto j = amountOfElements; j < (position + MENUVIEWITEMS-1); j++)
             show_elements(emptyWorker, i); //запись пустых элементов
         return -9999;}
-    if ((go) and (SORT == SORTUP))
+    if (SORT == SORTUP)
         i = moving_elements(go->right, SORT, i, position);//обход правого поддерева
-    else if ((go) and (SORT == SORTDOWN))
+    else if (SORT == SORTDOWN)
         i = moving_elements(go->left, SORT, i, position);}
 
+
+
 LIST* add_element(WORK newWorker, LIST* go) {
+    
     if (go == NULL){
         go = new LIST;
         go->newnode = newWorker;
         go->left = NULL;
         go->right = NULL;
-        if (newWorker.work_experience > 25)
-            sumWorkingClass[newWorker.working_class - 1][5] ++;
-        else if (newWorker.work_experience >= 21)
-            sumWorkingClass[newWorker.working_class - 1][4] ++;
-        else if (newWorker.work_experience >= 16)
-            sumWorkingClass[newWorker.working_class - 1][3] ++;
-        else if (newWorker.work_experience >= 11)
-            sumWorkingClass[newWorker.working_class - 1][2] ++;
-        else if (newWorker.work_experience >= 6)
-            sumWorkingClass[newWorker.working_class - 1][1] ++;
-        else if (newWorker.work_experience < 6)
-            sumWorkingClass[newWorker.working_class - 1][0] ++;
-        global_back(go,ADD);
-        return go;}
+
+}
     else if ((newWorker.key[0]==go->newnode.key[0])and(newWorker.key[1] == go->newnode.key[1])and(newWorker.key[2] == go->newnode.key[2])and(newWorker.key[3] == go->newnode.key[3])){
         BLOCK;
         cout << "Ошибка - табельный номер " << go->newnode.key[0] << go->newnode.key[1] << go->newnode.key[2] << go->newnode.key[3] << " уже записан, работник - " << go->newnode.FIO << endl;
@@ -865,13 +872,16 @@ LIST* add_element(WORK newWorker, LIST* go) {
             else if (newWorker.key[i] > go->newnode.key[i]) {
                 go->right = add_element(newWorker, go->right);
                 return(go);}     
-            else { continue; }}}}
+            else { continue; }}}global_addSumWorkingClass(newWorker);
+            global_back(go, ADD);
+            return go;
+}
 
 
 LIST* delete_element(LIST* go, WORK newWorker) {
     if (go == NULL)
         return go;
-    if ((newWorker.key[0] == go->newnode.key[0]) and (newWorker.key[1] == go->newnode.key[1]) and (newWorker.key[2] == go->newnode.key[2]) and (newWorker.key[3] == go->newnode.key[3])) {
+    if ((newWorker.key[0] == go->newnode.key[0]) and (newWorker.key[1] == go->newnode.key[1]) and (newWorker.key[2] == go->newnode.key[2]) and (newWorker.key[3] == go->newnode.key[3])){
         LIST* tmp;
         if (go->right == NULL)
             tmp = go->left;
@@ -927,7 +937,7 @@ char scrolling_menu(){
             item = 0;
             continue;}
         item = _getch_nolock();
-        switch (item) {
+        switch (item){
         case 80:{
             if (menuLabel == MENUDOWN){
                 menuLabel = 1;
