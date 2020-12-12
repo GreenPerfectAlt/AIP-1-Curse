@@ -54,7 +54,8 @@
 #define PAUSE system("pause")
 #define CLEAR cin.clear(); cin.ignore(cin.rdbuf()->in_avail())//очистка буфера ввода
 #pragma warning(disable : 4996)//отключение предупреждения для Visual Studio
-//---обявления---//
+
+ //---------------------------обявления--------------------------//
 using std::ofstream;
 using std::cout;
 using std::cin;
