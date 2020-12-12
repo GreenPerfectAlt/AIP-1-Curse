@@ -233,8 +233,8 @@ LIST* reading_from_file(LIST* go) {//чтение из файла
     puts("Загрузка базы данных из файла \"BASEFILE\"");
     FILE* base_file = fopen(BASEFILE, "r");
     FILE* read_file;
-    while (!base_file){
-        puts("База данных не создана (или пустая)");
+    while (!(base_file)or(getc(base_file) == EOF)){
+        puts("База данных пустая");
         puts("Хотите загрузить из другого файла?(1/0 -->ENTER) : ");
         cin >> create_file;
         if (create_file == 0) {
@@ -243,6 +243,7 @@ LIST* reading_from_file(LIST* go) {//чтение из файла
             BLOCK;PAUSE;
             return go;}
         else {
+            fseek(base_file, 0, SEEK_SET);
             puts( "Введите название файла : ");CLEAR;
             cin >> name_file;
             read_file = fopen(name_file, "a+t");
@@ -259,6 +260,7 @@ LIST* reading_from_file(LIST* go) {//чтение из файла
             puts( "Данные успешно сохранились в базу");
             fclose(read_file);PAUSE;return go;}}
         /*----чтение записей из файла----*/
+		fseek(base_file, 0, SEEK_SET);
         do {
             create_file = fread(&newWorker, sizeof(WORK), 1, base_file); //чтение структуры из файла
             if (create_file < 1)
@@ -507,9 +509,11 @@ LIST* organization_table(LIST* go){
         if (cin.get() == '1') {
             go = cleaning_table(go);
             puts("Структура записей удалена");}
-        else { PAUSE; return go; }}
-    CLEAR;
+        else { PAUSE; return go; }
+    }else puts("Структура пустая");
+    
     puts( "Хотите загрузить из файла или создать с нуля?(1 - с файла)");
+    CLEAR;
     if (cin.get() == '1') {
         char* name_file = new char[WIDTHF];
         bool create_file = false;
@@ -526,6 +530,9 @@ LIST* organization_table(LIST* go){
             if (getc(read_file) == EOF) {
                 puts("Файл пустой");
                 read_file = fopen("", "r");
+                puts("\nЗапись окончена");
+                return go;
+                PAUSE;
             }
             else {
                 fseek(read_file, 0L, SEEK_SET); break;
@@ -773,6 +780,7 @@ LIST* operations_table(LIST* go, TABLE TAG){
     else
         processed_table_file.open("default_processed_table.txt", std::ios::out, std::ios::trunc);
     writing_to_txt(processed_table_file, go, MOD);
+    printf("Сохраненно в файл /%s\n", buf);
     processed_table_file.close();PAUSE; return go;}
 
 //---функции работы с структурой записей
