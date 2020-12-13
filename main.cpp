@@ -557,6 +557,7 @@ LIST* organization_table(LIST* go){
                 continue;}
             global_back(go,ADD);}
         else {
+            SetConsoleTextAttribute(hConsole, (WORD)((15 << 4) | 0));
             puts( "\nЗапись окончена");
             PAUSE;
             return go;}}}
