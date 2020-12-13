@@ -511,7 +511,6 @@ LIST* organization_table(LIST* go){
             puts("Структура записей удалена");}
         else { PAUSE; return go; }
     }else puts("Структура пустая");
-    
     puts( "Хотите загрузить из файла или создать с нуля?(1 - с файла)");
     CLEAR;
     if (cin.get() == '1') {
@@ -526,13 +525,13 @@ LIST* organization_table(LIST* go){
                 PAUSE;
                 return go;
             }
-            read_file = fopen(name_file, "r");
-            if (getc(read_file) == EOF) {
+            read_file = fopen(name_file, "a+t");
+            if (read_file) {
                 puts("Файл пустой");
                 read_file = fopen("", "r");
                 puts("\nЗапись окончена");
-                return go;
                 PAUSE;
+                return go;
             }
             else {
                 fseek(read_file, 0L, SEEK_SET); break;
@@ -559,6 +558,7 @@ LIST* organization_table(LIST* go){
             global_back(go,ADD);}
         else {
             puts( "\nЗапись окончена");
+            PAUSE;
             return go;}}}
 
 //---очистка структуры записей
