@@ -243,7 +243,7 @@ LIST* reading_from_file(LIST* go) {//чтение из файла
             BLOCK;PAUSE;
             return go;}
         else {
-            fseek(base_file, 0, SEEK_SET);
+            if(base_file)fseek(base_file, 0L, SEEK_SET);
             puts( "Введите название файла : ");CLEAR;
             cin >> name_file;
             read_file = fopen(name_file, "a+t");
